@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 def draw_isolated_character(src_img, contours):
     blank = np.zeros(src_img.shape, dtype=np.uint8) 
-    cv.drawContours(blank, contours, -1, (255, 255, 255), thickness=cv.FILLED)
+    cv.drawContours(blank, [contours], -1, (255, 255, 255), -1)
     return blank
 
 
@@ -42,13 +42,13 @@ def filter_contours(contours, src_img_w, src_img_h):
 def isolate_character_exp(src_image):
     #cropped_image = src_image[20:100, 20:100]
 
-    #gray = cv.cvtColor(src_image, cv.COLOR_BGR2GRAY)
+    gray = cv.cvtColor(src_image, cv.COLOR_BGR2GRAY)
     #adjusted = cv.convertScaleAbs(gray, alpha=2, beta=0)
     #adjusted = np.clip(adjusted, 0, 255).astype('uint8')
 
-    adjusted = cv.convertScaleAbs(src_image, alpha=2, beta=0)
-    adjusted = np.clip(adjusted, 0, 255).astype('uint8')
-    gray = cv.cvtColor(adjusted, cv.COLOR_BGR2GRAY)
+    #adjusted = cv.convertScaleAbs(src_image, alpha=2, beta=0) # up contrast 
+    #adjusted = np.clip(adjusted, 0, 255).astype('uint8')
+    #gray = cv.cvtColor(adjusted, cv.COLOR_BGR2GRAY)
     
     #clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     #clahe_image = clahe.apply(gray)
@@ -56,32 +56,44 @@ def isolate_character_exp(src_image):
 
     blur = cv.GaussianBlur(gray, (5, 5), 0)
 
+    # TODO: do the contours to find the shape then run the thresholding on just that shape 
+    # "Otsu's method performs well when the histogram has a bimodal distribution with a deep and 
+    # sharp valley between the two peaks"
+
     #_, thresh = cv.threshold(gray, 150, 255, cv.THRESH_BINARY)
     #thresh = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 21, 3)
-    _, thresh = cv.threshold(blur, 0, 255, cv.THRESH_OTSU)
+    #_, thresh = cv.threshold(blur, 0, 255, cv.THRESH_OTSU)
 
+    thresh = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 7, 3) 
+
+    cv.imwrite("_srcimagething.jpg", src_image)
     cv.imwrite("_thresholdthing.jpg", thresh) 
     cv.imwrite("_graything.jpg", gray) 
     cv.imwrite("_blurthing.jpg", blur) 
-    cv.imwrite("_contrastthing.jpg", adjusted) 
+    #cv.imwrite("_contrastthing.jpg", adjusted) 
 
     #ctrs, hier = cv.findContours(thresh.copy(), cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
     #ctrs, hier = cv.findContours(thresh.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     #ctrs, hier = cv.findContours(thresh, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
-    ctrs, hier = cv.findContours(thresh, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
+
+    #ctrs, hier = cv.findContours(thresh, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
+    ctrs, hier = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     src_w, src_h = src_image.shape[:2]
     filtered_contours = filter_contours(ctrs, src_w, src_h)
 
+    contours = sorted(filtered_contours, key=cv.contourArea, reverse=False)
+    small_ctr = contours[0]
+    
     gray = cv.cvtColor(gray, cv.COLOR_GRAY2BGR)
     cv.drawContours(gray, ctrs, -1, (255, 0, 255), 1)
-    cv.drawContours(gray, filtered_contours, -1, (0, 255, 0), 2)
+    cv.drawContours(gray, [small_ctr], -1, (0, 255, 0), 1)
     cv.imwrite("_contoursthing.jpg", gray)
 
     #blank_image = np.zeros_like(src_image)
     #for ctr in ctrs:
         #cv.drawContours(blank_image, [ctr], -1, (255, 255, 255), thickness=cv.FILLED)
 
-    isolated_character_img = draw_isolated_character(src_image, filtered_contours) 
+    isolated_character_img = draw_isolated_character(src_image, small_ctr) 
 
     return isolated_character_img
 
