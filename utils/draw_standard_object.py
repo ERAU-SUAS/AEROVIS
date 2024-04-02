@@ -2,31 +2,40 @@ import cv2 as cv
 import numpy as np
 import random
 import string
+from PIL import ImageFont, ImageDraw, Image  
 
 
 def draw_character(image, pos, character, character_color):
-    font = cv.FONT_HERSHEY_DUPLEX
-    font_scale = 2 
-    thickness = 6 
+    size = 55 
+    img = cv.cvtColor(image, cv.COLOR_BGRA2RGBA)  
+    pil_img = Image.fromarray(img) 
+    draw = ImageDraw.Draw(pil_img)  
+    font = ImageFont.truetype("assets/font2.ttf", size)  
+    draw.text((pos[0]-15, pos[1]-42), character, font=font, fill=(character_color[2], character_color[1], character_color[0], character_color[3]))  
+    return cv.cvtColor(np.array(pil_img), cv.COLOR_RGB2BGRA)  
+    ###
+    font = cv.FONT_HERSHEY_SIMPLEX
+    font_scale = 1.7 
+    thickness = 4 
     cv.putText(image, character, (pos[0]-20, pos[1]+15), font, font_scale, character_color, thickness, cv.LINE_AA)
     return image
 
 
 def draw_circle(image, center, color, character, character_color):
     cv.circle(image, center, SHAPE_SIZE, color, thickness=-1, lineType=cv.LINE_AA)
-    image = draw_character(image, (SHAPE_IMG_SIZE//2, (SHAPE_IMG_SIZE//2)), character, character_color)
+    image = draw_character(image, (SHAPE_IMG_SIZE//2, (SHAPE_IMG_SIZE//2)+10), character, character_color)
     return image
 
 
 def draw_semicircle(image, center, color, character, character_color):
     cv.ellipse(image, center, (SHAPE_SIZE+10, SHAPE_SIZE+10), 0, 0, 180, color, thickness=-1, lineType=cv.LINE_AA)
-    draw_character(image, (SHAPE_IMG_SIZE//2, (SHAPE_IMG_SIZE//2)+35), character, character_color)
+    image = draw_character(image, (SHAPE_IMG_SIZE//2, (SHAPE_IMG_SIZE//2)+35), character, character_color)
     return image
 
 
 def draw_quarter_circle(image, center, color, character, character_color):
     cv.ellipse(image, (center[0]-(SHAPE_SIZE//2)-10, center[1]-(SHAPE_SIZE//2)-10), (SHAPE_SIZE*2, SHAPE_SIZE*2), 0, 0, 90, color, thickness=-1, lineType=cv.LINE_AA)
-    draw_character(image, (SHAPE_IMG_SIZE//2+5, (SHAPE_IMG_SIZE//2)+15), character, character_color)
+    image = draw_character(image, (SHAPE_IMG_SIZE//2+5, (SHAPE_IMG_SIZE//2)+15), character, character_color)
     return image
 
 
@@ -60,7 +69,7 @@ def draw_pentagon(image, center, color, character, character_color):
 def draw_star(image, center, color, character, character_color):
     num_vertices = 5
 
-    outer_radius = SHAPE_SIZE + 15 
+    outer_radius = SHAPE_SIZE + 18 
     inner_radius = outer_radius * np.cos(2 * np.pi / num_vertices) / np.cos(np.pi / num_vertices)
     outer_angle = 2 * np.pi / num_vertices
     inner_angle = np.pi / num_vertices
@@ -84,7 +93,7 @@ def draw_star(image, center, color, character, character_color):
 
 
 def draw_cross(image, center, color, character, character_color):
-    thickness = (SHAPE_SIZE // 2) + 15 
+    thickness = (SHAPE_SIZE // 2) + 16 
 
     start_point_h = (center[0] - SHAPE_SIZE, center[1] - thickness // 2)
     end_point_h = (center[0] + SHAPE_SIZE, center[1] + thickness // 2)
@@ -94,7 +103,7 @@ def draw_cross(image, center, color, character, character_color):
     end_point_v = (center[0] + thickness // 2, center[1] + SHAPE_SIZE)
     cv.rectangle(image, start_point_v, end_point_v, color, -1)
 
-    image = draw_character(image, (SHAPE_IMG_SIZE//2, (SHAPE_IMG_SIZE//2)), character, character_color)
+    image = draw_character(image, (SHAPE_IMG_SIZE//2, (SHAPE_IMG_SIZE//2)+3), character, character_color)
 
     return image
 
@@ -130,14 +139,14 @@ def draw_shape(image):
     character = random.choice(string.ascii_uppercase + string.digits)
     shape = random.randint(0, 7)
 
-    shape_color = random.choice(list(COLORS.values())) 
-    character_color = random.choice(list(COLORS.values()))
+    shape_color = random.choice(list(COLORS)) 
+    character_color = random.choice(list(COLORS))
     while character_color == shape_color:
-        character_color = random.choice(list(COLORS.values()))
+        character_color = random.choice(list(COLORS))
 
     draw_function = DRAW_SHAPE_FUNCTIONS.get(shape, None)
-    standard_object_image = draw_function(image, center, shape_color, character, character_color)
-    standard_object_info = (shape, character)
+    standard_object_image = draw_function(image, center, COLORS[shape_color], character, COLORS[character_color])
+    standard_object_info = (shape, character, shape_color, character_color)
 
     return (standard_object_image, standard_object_info)
     

@@ -137,13 +137,15 @@ def generate_data(samples, dir):
         standard_object = draw_shape(create_transparent_image()) 
         standard_object_image = rotate_shape_image(standard_object[0], random.randint(0, 360))
         standard_object_shape = standard_object[1][0]
+        standard_object_shape_color = standard_object[1][2]
         standard_object_character = standard_object[1][1]
+        standard_object_character_color = standard_object[1][3]
         standard_object_center = get_safe_center(RESULT_IMG_WIDTH, RESULT_IMG_HEIGHT, SHAPE_IMG_SIZE, SHAPE_IMG_SIZE) 
 
         standard_object_image_full = overlay_shape_on_background(background_image, standard_object_image, standard_object_center) 
         standard_object_label = f"{standard_object_shape} {standard_object_center[0]} {standard_object_center[1]} {REL_BBOX_SIZE} {REL_BBOX_SIZE}" 
 
-        file_name = generate_filename(standard_object_label, 32) + "_" + standard_object_character 
+        file_name = generate_filename(standard_object_label, 16) + "_" + standard_object_character + "_" + standard_object_shape_color + "_" + standard_object_character_color 
         print(file_name)
         img_path = os.path.join(OUTPUT_FOLDER, f"{dir}/images/{file_name}.jpg")
         label_path = os.path.join(OUTPUT_FOLDER, f"{dir}/labels/{file_name}.txt") 
