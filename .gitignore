@@ -4,3 +4,6 @@ env
 runs
 models
 __pycache__
+
+log/
+_*.jpg

@@ -5,8 +5,14 @@ from src.shape_detector import predict
 from src.isolate_character import isolate_character, isolate_character_exp
 from src.color_extractor import get_shape_color
 import numpy as np
+from utils.display_log import generate_html_file 
 
+SAMPLES = 100
+LOG_DIR = "log"
+LOG_RESULT_IMG_DIR = f"{LOG_DIR}/pics"
+LOG_FILE_NAME = "log"
 TESSERACT_CUSTOM_CONFIG = r'--psm 10'
+DEFAULT_SHAPE_DETECT_MODEL_PATH = "runs/detect/exp/weights/best.pt"
 
 def add_bound_box(src_img, xywh_tensor_values, label): 
     bbox = []
@@ -25,7 +31,15 @@ def add_bound_box(src_img, xywh_tensor_values, label):
 def get_random_img():
     dir = os.path.abspath("standard_object_dataset/test/images") 
     files = [f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))]
-    return os.path.abspath(f"standard_object_dataset/test/images/{random.choice(files)}")
+    #return "/Users/carson/Documents/Devlopment/SUAS/aero/AEROVIS/standard_object_dataset/test/images/68d5a510f29f5a84c04714f7177e1cb2_V.jpg"
+    rfn = random.choice(files)
+    s = rfn.split('_')
+    return (
+        os.path.abspath(f"standard_object_dataset/test/images/{rfn}"),
+        s[1],
+        s[2],
+        s[3]
+    )
 
 
 def crop_image(src_image, xywh):
@@ -39,13 +53,31 @@ def crop_image(src_image, xywh):
     return src_image[bbox[1]:bbox[1]+bbox[3], bbox[0]:bbox[0]+bbox[2]]
 
 
-def debug():
-    DEFAULT_SHAPE_DETECT_MODEL_PATH = "runs/detect/exp/weights/best.pt"
+class Logger():
+    def __init__(self):
+        try:
+            os.removedirs(LOG_DIR)
+        except:
+            pass
+        os.makedirs(LOG_DIR, exist_ok=True)
+        os.makedirs(LOG_RESULT_IMG_DIR, exist_ok=True)
+        self.log_file = open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "a") 
 
-    random_img = get_random_img()
-    img = cv.imread(random_img)
+    def log(self, character, shape_color, character_color, result_path, og_img_path): 
+        self.log_file.write(f"{character},{shape_color},{character_color},{result_path},{og_img_path}\n")
 
-    res = predict(DEFAULT_SHAPE_DETECT_MODEL_PATH, random_img)
+
+def debug(logger):
+    img_data = get_random_img()
+    random_img_path = img_data[0]
+    character = img_data[1]
+    shape_color = img_data[2]
+    character_color = img_data[3]
+    character_color = character_color.split(".")[0]
+    
+    img = cv.imread(random_img_path)
+
+    res = predict(DEFAULT_SHAPE_DETECT_MODEL_PATH, random_img_path)
     tensor = res[0].boxes.xywh.clone().detach()
     try:
         xywh_tensor_values = tensor.cpu().numpy().tolist()[0] 
@@ -55,18 +87,33 @@ def debug():
 
     #isolated_character_image = isolate_character(cropped_img) 
     isolated_character_image = isolate_character_exp(cropped_img) 
+    random_img_file_name = random_img_path.split('/')[-1]
+    result_path = f"{LOG_RESULT_IMG_DIR}/{random_img_file_name.split('.')[0]}_result.jpg"
+    og_image_path = f"{LOG_RESULT_IMG_DIR}/{random_img_file_name.split('.')[0]}_cropped.jpg"
 
     classes = res[0].names
     box_class = int(res[0].boxes.cls.cpu().numpy().tolist()[0])
     label = classes[box_class]
     image_with_box = add_bound_box(img, xywh_tensor_values, label)
 
-    cv.imshow("shape detection", image_with_box)
-    cv.imshow("isolated character", isolated_character_image)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
+    #cv.imshow("shape detection", image_with_box)
+    #cv.imshow("isolated character", isolated_character_image)
+
+    cv.imwrite(result_path, isolated_character_image)
+    cv.imwrite(og_image_path, cropped_img)
+    logger.log(character, shape_color, character_color, result_path, og_image_path) 
+
+    #cv.waitKey(0)
+    #cv.destroyAllWindows()
 
 
 if __name__ == '__main__':
-    while True:
-        debug() 
+    logger = Logger()
+    for i in range(SAMPLES):
+        try:
+            debug(logger) 
+            print(f"[SUCCESSFULLY LOGGED ({i+1}/{SAMPLES})]")
+        except Exception as e:
+            print(f"[ERROR] -> {e}")
+    generate_html_file()
+
