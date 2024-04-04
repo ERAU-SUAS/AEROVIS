@@ -8,14 +8,70 @@ LOG_DIR = "log"
 LOG_RESULT_IMG_DIR = f"{LOG_DIR}/pics"
 LOG_FILE_NAME = "log"
 
+def toggle_error(target_line_no, is_checked):
+    content = ""
+    with open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "r") as f: 
+        for line_no, line in enumerate(f.readlines()):
+            if line_no == target_line_no:
+                spt = line.split(',')
+                if (spt[0] == "ERROR" and is_checked) or (spt[0] != "ERROR" and not is_checked):
+                    content += line
+                elif spt[0] == "ERROR":
+                    content += ''.join(entry + ',' for entry in spt[2:])[:-1]
+                elif spt[0] != "ERROR" and is_checked:
+                    content += "ERROR,flagged as error," + line 
+            else:
+                content += line
+    with open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "w") as f: 
+        f.write(content)
+
+
+def keep_errors():
+    stuff_to_keep = ""
+    imgs_to_keep = []
+    with open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "r") as f: 
+        for line in f.readlines():
+            spt = line.split(',')
+            if spt[0] == "ERROR":
+                match = re.search(r'pics/([a-z0-9]+)_', spt[-1])
+                imgs_to_keep.append(match.group(1))
+                stuff_to_keep += line
+    with open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "w") as f: 
+        f.write(stuff_to_keep) 
+
+    for filename in os.listdir(LOG_RESULT_IMG_DIR):
+        thing = filename.split('_')[0] 
+        if thing not in imgs_to_keep:
+            file_path = os.path.join(LOG_RESULT_IMG_DIR, filename)
+            os.remove(file_path)
+
 
 class Logger():
-    shutil.rmtree(LOG_DIR, ignore_errors=True)
-    os.makedirs(LOG_DIR, exist_ok=True)
-    os.makedirs(LOG_RESULT_IMG_DIR, exist_ok=True)
-    log_file = open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "a") 
+    only_errors_flag = False
+    log_file = None 
+
+    def init_logger(only_errors_flag, keep_errors_flag):
+        Logger.only_errors_flag = only_errors_flag 
+        if keep_errors_flag: 
+            try:
+                os.remove(HTML_FILE)
+            except OSError:
+                pass
+            keep_errors()
+        else:
+            shutil.rmtree(LOG_DIR, ignore_errors=True)
+
+        os.makedirs(LOG_DIR, exist_ok=True)
+        os.makedirs(LOG_RESULT_IMG_DIR, exist_ok=True)
+        Logger.log_file = open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "a") 
 
     def log(character, shape_color, character_color, last_image_path, og_img_path, error_msg=None): 
+        error = ""
+        if error_msg is None and Logger.only_errors_flag:
+            return
+        elif error_msg is not None:
+            error = f"ERROR,{error_msg},"
+
         # inb4 "why not just pass an array" - does this not look like more fun?!!?/!11!1!!??/!!
         match = re.search(r'(\d+)(?=\.[^\.]+$)', last_image_path) 
         num_imgs = int(match.group(1)) # impossible for no matches. whats an error? 
@@ -25,17 +81,12 @@ class Logger():
             number = this_is_a_really_long_name_for_a_variable_lol_especially_when_i_couldve_just_used_i + 1
             img_paths += re.sub(r'(_\d+)(\.\w+)$', r'_{}\2'.format(number), last_image_path) + ","
 
-        error = ""
-        if error_msg is not None:
-            error = f"ERROR,{error_msg},"
-
         Logger.log_file.write(f"{error}{character},{shape_color},{character_color},{og_img_path},{img_paths[:-1]}\n")
 
     def close_log_file():
         Logger.log_file.close()
 
-
-# thanks gpt4 :D
+# thanks gpt :D
 def generate_html_file():
     # Assuming your CSV file is named 'data.csv' and located in the same directory as your script
     csv_file_path = 'log/log.csv'  # Update this to your CSV file path
@@ -65,12 +116,14 @@ def generate_html_file():
 
         character, color1, color2 = splt[error_offset:3 + error_offset] 
         img_paths = splt[3 + error_offset:]
-        num_imgs = len(img_paths) - 1
+        num_imgs = max(num_imgs, len(img_paths) - 1)
         img_path_content = ""
         for img_path in img_paths:
             img_path_content += f'\t\t\t\t<td><img src="{img_path[4:]}" alt="Image" height="100"></td>\n'
+        checked_text = "checked" if error else ""
         imgs_html_content += f"""
             {tr_text}
+                <td><input type="checkbox" id="cb{counter + 1}" onchange="toggleError({counter + 1}, this.checked)" {checked_text} autocomplete="off"></td>
                 <td>{counter + 1}</td>
                 <td>{character}</td>
                 <td>{color1}</td>
@@ -103,15 +156,20 @@ def generate_html_file():
         </style>
     </head>
     <body>
+        <span>Sample Count: <input type="text" value="20" id="sampleCount"></input></span>
+        <span>Only Log Errors: <input type="checkbox" id="onlyLogErrors"></input></span>
+        <span>Keep Existing Errors: <input type="checkbox" id="keepExistingErrors"></input></span>
+        <button onClick="debug()" id="debugButton">Run Script</button>
+
         <table>
             <tr>
+                <th>Flag Error</th>
                 <th>#</th>
                 <th>Character</th>
                 <th>Shape Color</th>
                 <th>Character Color</th>
                 <th>Original Image</th>
                 {headers_for_imgs}
-                <th>Error Info</th>
             </tr>
 {imgs_html_content}
     """
@@ -119,6 +177,54 @@ def generate_html_file():
     # Close the table and the HTML tags
     html_content += """
         </table>
+
+        <script>
+            function debug() {
+                document.getElementById("debugButton").disabled = true; 
+
+                sc = document.getElementById("sampleCount").value;
+                ole = document.getElementById("onlyLogErrors").checked;
+                kee = document.getElementById("keepExistingErrors").checked;
+            
+                fetch('/debug', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `sample_count=${sc}&only_log_errors=${ole}&keep_existing_errors=${kee}`,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById("debugButton").disabled = false; 
+                        window.location.reload();
+                    } else {
+                        alert("Error running debug script");
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+
+            function toggleError(customIdentifier, isChecked) {
+                fetch('/toggle-error', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `identifier=${customIdentifier}&is_checked=${isChecked}`,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert("Error updating error status");
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        </script>
+
     </body>
     </html>
     """

@@ -67,10 +67,10 @@ def isolate_character_exp(src_image):
 
     thresh = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 5, 3) 
 
-    cv.imwrite("_srcimagething.jpg", src_image)
-    cv.imwrite("_thresholdthing.jpg", thresh) 
-    cv.imwrite("_graything.jpg", gray) 
-    cv.imwrite("_blurthing.jpg", blur) 
+    #cv.imwrite("_srcimagething.jpg", src_image)
+    #cv.imwrite("_thresholdthing.jpg", thresh) 
+    #cv.imwrite("_graything.jpg", gray) 
+    #cv.imwrite("_blurthing.jpg", blur) 
     #cv.imwrite("_contrastthing.jpg", adjusted) 
 
     #ctrs, hier = cv.findContours(thresh.copy(), cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
@@ -82,15 +82,15 @@ def isolate_character_exp(src_image):
     src_w, src_h = src_image.shape[:2]
     filtered_contours = filter_contours(ctrs, src_w, src_h)
     if len(filtered_contours) == 0:
-        return -1, [thresh, "filtered_contours length is 0"]
+        return -1, [gray, blur, thresh, "filtered_contours length is 0"]
 
     contours = sorted(filtered_contours, key=cv.contourArea, reverse=False)
     small_ctr = contours[0]
     
-    gray = cv.cvtColor(gray, cv.COLOR_GRAY2BGR)
-    cv.drawContours(gray, ctrs, -1, (255, 0, 255), 1)
-    cv.drawContours(gray, [small_ctr], -1, (0, 255, 0), 1)
-    cv.imwrite("_contoursthing.jpg", gray)
+    ctr_pic = cv.cvtColor(gray, cv.COLOR_GRAY2BGR)
+    cv.drawContours(ctr_pic, ctrs, -1, (255, 0, 255), 1)
+    cv.drawContours(ctr_pic, [small_ctr], -1, (0, 255, 0), 1)
+    #cv.imwrite("_contoursthing.jpg", gray)
 
     #blank_image = np.zeros_like(src_image)
     #for ctr in ctrs:
@@ -98,7 +98,7 @@ def isolate_character_exp(src_image):
 
     isolated_character_img = draw_isolated_character(src_image, small_ctr) 
 
-    return 0, [thresh] 
+    return 0, [gray, blur, ctr_pic, thresh] 
 
 
 def isolate_character(src_image):
