@@ -5,12 +5,9 @@ from src.shape_detector import predict
 from src.isolate_character import isolate_character, isolate_character_exp
 from src.color_extractor import get_shape_color
 import numpy as np
-from utils.display_log import generate_html_file 
+from utils.logger import Logger, generate_html_file, LOG_RESULT_IMG_DIR 
 
-SAMPLES = 100
-LOG_DIR = "log"
-LOG_RESULT_IMG_DIR = f"{LOG_DIR}/pics"
-LOG_FILE_NAME = "log"
+SAMPLES = 25 
 TESSERACT_CUSTOM_CONFIG = r'--psm 10'
 DEFAULT_SHAPE_DETECT_MODEL_PATH = "runs/detect/exp/weights/best.pt"
 
@@ -53,21 +50,8 @@ def crop_image(src_image, xywh):
     return src_image[bbox[1]:bbox[1]+bbox[3], bbox[0]:bbox[0]+bbox[2]]
 
 
-class Logger():
-    def __init__(self):
-        try:
-            os.removedirs(LOG_DIR)
-        except:
-            pass
-        os.makedirs(LOG_DIR, exist_ok=True)
-        os.makedirs(LOG_RESULT_IMG_DIR, exist_ok=True)
-        self.log_file = open(LOG_DIR + f"/{LOG_FILE_NAME}.csv", "a") 
 
-    def log(self, character, shape_color, character_color, result_path, og_img_path): 
-        self.log_file.write(f"{character},{shape_color},{character_color},{result_path},{og_img_path}\n")
-
-
-def debug(logger):
+def debug():
     img_data = get_random_img()
     random_img_path = img_data[0]
     character = img_data[1]
@@ -85,35 +69,39 @@ def debug(logger):
         return
     cropped_img = crop_image(img, xywh_tensor_values)
 
-    #isolated_character_image = isolate_character(cropped_img) 
-    isolated_character_image = isolate_character_exp(cropped_img) 
     random_img_file_name = random_img_path.split('/')[-1]
-    result_path = f"{LOG_RESULT_IMG_DIR}/{random_img_file_name.split('.')[0]}_result.jpg"
     og_image_path = f"{LOG_RESULT_IMG_DIR}/{random_img_file_name.split('.')[0]}_cropped.jpg"
+    cv.imwrite(og_image_path, cropped_img)
 
-    classes = res[0].names
-    box_class = int(res[0].boxes.cls.cpu().numpy().tolist()[0])
-    label = classes[box_class]
-    image_with_box = add_bound_box(img, xywh_tensor_values, label)
+    #isolated_character_image = isolate_character(cropped_img) 
+    #isolated_character_image = isolate_character_exp(cropped_img) 
+
+    status, results = isolate_character_exp(cropped_img) 
+
+    for i in range(len(results) + status): # status of -1 -> error, last value in results is the error message 
+        result_path = f"{LOG_RESULT_IMG_DIR}/{random_img_file_name.split('.')[0]}_result_{i+1}.jpg"
+        cv.imwrite(result_path, results[i])
+
+    if status == -1: 
+        Logger.log(character, shape_color, character_color, result_path, og_image_path, error_msg=results[-1]) 
+    else:
+        Logger.log(character, shape_color, character_color, result_path, og_image_path) 
+
+    #classes = res[0].names
+    #box_class = int(res[0].boxes.cls.cpu().numpy().tolist()[0])
+    #label = classes[box_class]
+    #image_with_box = add_bound_box(img, xywh_tensor_values, label)
 
     #cv.imshow("shape detection", image_with_box)
     #cv.imshow("isolated character", isolated_character_image)
-
-    cv.imwrite(result_path, isolated_character_image)
-    cv.imwrite(og_image_path, cropped_img)
-    logger.log(character, shape_color, character_color, result_path, og_image_path) 
 
     #cv.waitKey(0)
     #cv.destroyAllWindows()
 
 
 if __name__ == '__main__':
-    logger = Logger()
     for i in range(SAMPLES):
-        try:
-            debug(logger) 
-            print(f"[SUCCESSFULLY LOGGED ({i+1}/{SAMPLES})]")
-        except Exception as e:
-            print(f"[ERROR] -> {e}")
+        debug()
+        print(f"[{i+1}/{SAMPLES}]")
     generate_html_file()
 

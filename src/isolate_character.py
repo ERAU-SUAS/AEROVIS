@@ -3,6 +3,7 @@ import cv2 as cv
 import numpy as np
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+from utils.logger import Logger
 
 
 def draw_isolated_character(src_img, contours):
@@ -64,7 +65,7 @@ def isolate_character_exp(src_image):
     #thresh = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 21, 3)
     #_, thresh = cv.threshold(blur, 0, 255, cv.THRESH_OTSU)
 
-    thresh = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 7, 3) 
+    thresh = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 5, 3) 
 
     cv.imwrite("_srcimagething.jpg", src_image)
     cv.imwrite("_thresholdthing.jpg", thresh) 
@@ -80,6 +81,8 @@ def isolate_character_exp(src_image):
     ctrs, hier = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     src_w, src_h = src_image.shape[:2]
     filtered_contours = filter_contours(ctrs, src_w, src_h)
+    if len(filtered_contours) == 0:
+        return -1, [thresh, "filtered_contours length is 0"]
 
     contours = sorted(filtered_contours, key=cv.contourArea, reverse=False)
     small_ctr = contours[0]
@@ -95,7 +98,7 @@ def isolate_character_exp(src_image):
 
     isolated_character_img = draw_isolated_character(src_image, small_ctr) 
 
-    return isolated_character_img
+    return 0, [thresh] 
 
 
 def isolate_character(src_image):
