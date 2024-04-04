@@ -1,6 +1,7 @@
 import os
 import shutil
 import re
+import webbrowser
 
 HTML_FILE = 'log/index.html'
 LOG_DIR = "log"
@@ -80,7 +81,7 @@ def generate_html_file():
         """
 
     # wtf is python this is fun lol
-    headers_for_imgs = ''.join([f"<th>Test Result {index+1}</th>\n\t\t\t\t" for index in range(num_imgs)])
+    headers_for_imgs = ''.join([f"<th>Result {index+1}</th>\n\t\t\t\t" for index in range(num_imgs)])
 
     # Prepare the HTML content
     html_content = f"""
@@ -125,3 +126,10 @@ def generate_html_file():
     # Write the HTML content to a file
     with open(HTML_FILE, 'w') as html_file:
         html_file.write(html_content)
+
+
+def open_log():
+    new = 2 # open in a new tab, if possible
+    path = os.path.abspath(HTML_FILE)
+    url = f"file://{path}"
+    webbrowser.open(url,new=new)

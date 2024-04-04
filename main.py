@@ -5,7 +5,7 @@ from src.shape_detector import predict
 from src.isolate_character import isolate_character, isolate_character_exp
 from src.color_extractor import get_shape_color
 import numpy as np
-from utils.logger import Logger, generate_html_file, LOG_RESULT_IMG_DIR 
+from utils.logger import Logger, generate_html_file, LOG_RESULT_IMG_DIR, open_log 
 
 SAMPLES = 25 
 TESSERACT_CUSTOM_CONFIG = r'--psm 10'
@@ -104,4 +104,5 @@ if __name__ == '__main__':
         debug()
         print(f"[{i+1}/{SAMPLES}]")
     generate_html_file()
+    open_log()
 
