@@ -17,6 +17,7 @@ def handle_checkbox():
     is_checked = request.form.get('is_checked') == 'true'
     toggle_error(line_no - 1, is_checked)
     generate_html_file()
+    # TODO: dont reload all images?
     return {'success': True}
 
 

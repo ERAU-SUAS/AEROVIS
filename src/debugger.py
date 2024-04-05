@@ -7,7 +7,7 @@ from src.color_extractor import get_shape_color
 import numpy as np
 from utils.logger import Logger, LOG_RESULT_IMG_DIR
 
-SAMPLES = 100 
+SAMPLES = 20  
 DEFAULT_SHAPE_DETECT_MODEL_PATH = "runs/detect/exp/weights/best.pt"
 
 
@@ -81,10 +81,13 @@ def debug():
         result_path = f"{LOG_RESULT_IMG_DIR}/{random_img_file_name.split('.')[0]}_result_{i+1}.jpg"
         cv.imwrite(result_path, results[i])
 
-    if status == -1: 
-        Logger.log(character, shape_color, character_color, result_path, og_image_path, error_msg=results[-1]) 
-    else:
-        Logger.log(character, shape_color, character_color, result_path, og_image_path) 
+    try:
+        if status == -1: 
+            Logger.log(character, shape_color, character_color, result_path, og_image_path, error_msg=results[-1]) 
+        else:
+            Logger.log(character, shape_color, character_color, result_path, og_image_path) 
+    except:
+        pass
 
     #classes = res[0].names
     #box_class = int(res[0].boxes.cls.cpu().numpy().tolist()[0])
