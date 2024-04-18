@@ -7,7 +7,7 @@ from src.color_extractor import get_shape_color
 import numpy as np
 from utils.logger import Logger, LOG_RESULT_IMG_DIR
 
-SAMPLES = 20  
+SAMPLES = 1  
 DEFAULT_SHAPE_DETECT_MODEL_PATH = "runs/detect/exp/weights/best.pt"
 
 

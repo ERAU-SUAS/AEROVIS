@@ -39,8 +39,6 @@ def filter_contours(contours, src_img_w, src_img_h):
             
     return filtered_contours 
 
-import numpy as np
-
 
 def find_color_thing(image):
     image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
@@ -64,7 +62,7 @@ def find_color_thing(image):
     # Convert the color to integer values
     most_frequent_color = most_frequent_color.round().astype(int)
     
-    print("HELLOOW#*(&$(*&$%(*&%(*&(*&*(&: ", most_frequent_color)
+    print("most frequent color: ", most_frequent_color)
     return most_frequent_color
 
 
@@ -90,27 +88,49 @@ def crop_the_thing(image, size):
 def isolate_character_exp(src_image):
     # TODO: with the most frequent color voncert to black and convert grey values to black as well
     # Convert the image from BGR to HSV
-    blur = cv.GaussianBlur(src_image, (5, 5), 0)
+    blur = cv.GaussianBlur(src_image, (7, 7), 0)
     #most_freq_color = find_color_thing(blur)
 
-    cropped = crop_the_thing(blur, 40) 
+    cropped = crop_the_thing(blur, 50) 
     #hsv_image = cv.cvtColor(blur, cv.COLOR_BGR2HSV)
     hsv_image = cv.cvtColor(cropped, cv.COLOR_BGR2HSV)
+    hsv_image_two = cv.cvtColor(blur, cv.COLOR_BGR2HSV)
 
     # Quantize to 16 colors for simplification
     #hsv_image_quantized = hsv_image.copy()
+
+    HUE_ADJUST_VAL = 16
+    SAT_ADJUST_VAL = 64 
+    VAL_ADJUST_VAL = 64 
+
     hsv_image_quantized = hsv_image.copy()
-    hsv_image_quantized[:, :, 0] = (hsv_image_quantized[:, :, 0] // 16) * 16  # Hue
-    hsv_image_quantized[:, :, 1] = (hsv_image_quantized[:, :, 1] // 64) * 64  # Saturation
-    hsv_image_quantized[:, :, 2] = (hsv_image_quantized[:, :, 2] // 64) * 64  # Value
+    hsv_image_quantized[:, :, 0] = (hsv_image_quantized[:, :, 0] // HUE_ADJUST_VAL) * HUE_ADJUST_VAL  # Hue
+    hsv_image_quantized[:, :, 1] = (hsv_image_quantized[:, :, 1] // SAT_ADJUST_VAL) * SAT_ADJUST_VAL  # Saturation
+    hsv_image_quantized[:, :, 2] = (hsv_image_quantized[:, :, 2] // VAL_ADJUST_VAL) * VAL_ADJUST_VAL # Value
     
+    hsv_image_quantized_two = hsv_image_two.copy()
+    hsv_image_quantized_two[:, :, 0] = (hsv_image_quantized_two[:, :, 0] // HUE_ADJUST_VAL) * HUE_ADJUST_VAL # Hue
+    hsv_image_quantized_two[:, :, 1] = (hsv_image_quantized_two[:, :, 1] // SAT_ADJUST_VAL) * SAT_ADJUST_VAL # Saturation
+    hsv_image_quantized_two[:, :, 2] = (hsv_image_quantized_two[:, :, 2] // VAL_ADJUST_VAL) * VAL_ADJUST_VAL # Value
+
     # Convert back to BGR color space
     simplified_image = cv.cvtColor(hsv_image_quantized, cv.COLOR_HSV2BGR)
-    most_freq_color = find_color_thing(simplified_image)
+    blur_simp = cv.cvtColor(hsv_image_quantized_two, cv.COLOR_HSV2BGR)
+    min_color = find_color_thing(simplified_image)
+
+    print(min_color)
+
+    thingything1 = convert_colors_to_black_and_white(blur_simp, min_color) 
+    copied = thingything1.copy()
+    
+    thingything2 = fill_corners(copied)
+    thingything3 = invert_image(thingything2)
+
+    return 0, [cropped, blur_simp, thingything1, thingything2, thingything3] 
     
     # Find unique colors
     unique_colors = np.unique(simplified_image.reshape(-1, simplified_image.shape[2]), axis=0)
-    print("ISDY(F*^*&^T%$#$%^&*(*&&&&&&&&&&&&&)): ", unique_colors)
+    print("unique colors: ", unique_colors)
     
     # Convert unique colors back to HSV to filter by saturation
     unique_colors_hsv = cv.cvtColor(unique_colors.reshape(-1, 1, 3), cv.COLOR_BGR2HSV).reshape(-1, 3)
@@ -135,8 +155,35 @@ def isolate_character_exp(src_image):
     thing = [img for img in mask_images]
     thing.insert(0, simplified_image)
 
-    return 0, thing 
+    #return 0, thingything 
 
+
+def convert_colors_to_black_and_white(image, min_color):
+    # Load the image
+    # Convert image from BGR to RGB
+    image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+    
+    # Prepare masks for each color
+    mask = np.all(image == min_color, axis=-1)
+    
+    # Create a new black image of the same size
+    black_and_white_image = np.zeros_like(image)
+    
+    # Where mask1 is True, set those locations to black
+
+    # Where mask2 is True, set those locations to white
+    black_and_white_image[mask] = [255, 255, 255]  # White
+
+    # Convert back to BGR for OpenCV compatibility if saving or displaying
+    black_and_white_image = cv.cvtColor(black_and_white_image, cv.COLOR_RGB2BGR)
+
+    return black_and_white_image
+    
+    # Save or display the image
+    #cv.imwrite('output_image.png', black_and_white_image)
+    # cv.imshow('Result', black_and_white_image)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
 
 
 def bak2_isolate_character_exp(src_image):
@@ -269,3 +316,25 @@ def isolate_character(src_image):
     
     #plt.savefig('cluster_results.jpg')
     return clustered_images[2]
+
+
+def fill_corners(img):
+    NEW_VAL = (255, 255, 255, 255)
+    h, w = img.shape[:2]
+    print(w, h)
+
+    # corners and sides
+    cv.floodFill(img, None, (0, 0), NEW_VAL)
+    cv.floodFill(img, None, (w-1, 0), NEW_VAL)
+    cv.floodFill(img, None, (0, h-5), NEW_VAL)
+    cv.floodFill(img, None, (w-1, h-1), NEW_VAL)
+    cv.floodFill(img, None, (w//2, 0), NEW_VAL)
+    cv.floodFill(img, None, (w-1, h//2), NEW_VAL)
+    cv.floodFill(img, None, (w//2, h-1), NEW_VAL)
+    cv.floodFill(img, None, (0, h//2), NEW_VAL)
+
+    return img
+
+
+def invert_image(img):
+    return cv.bitwise_not(img)
